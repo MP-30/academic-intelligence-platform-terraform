@@ -1,31 +1,6 @@
-# ─────────────────────────────────────────────────────────────
-# RDS Postgres 18 with pgvector-optimized parameter group
-# ─────────────────────────────────────────────────────────────
-
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project}-db-subnets"
-  subnet_ids = data.aws_subnets.default.ids
-}
-
-resource "aws_security_group" "rds" {
-  name        = "${var.project}-rds-sg"
-  description = "Postgres access for ${var.project}"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    description = "Postgres from my IP"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = [local.my_ip]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  subnet_ids = aws_subnet.private[*].id
 }
 
 resource "aws_db_parameter_group" "pg18_vector_opts" {
@@ -34,12 +9,11 @@ resource "aws_db_parameter_group" "pg18_vector_opts" {
 
   parameter {
     name  = "maintenance_work_mem"
-    value = "1048576"   # 1 GB — speeds up HNSW index builds
+    value = "262144"
   }
-
   parameter {
     name  = "max_parallel_maintenance_workers"
-    value = "4"
+    value = "2"
   }
 }
 
@@ -60,7 +34,7 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   parameter_group_name   = aws_db_parameter_group.pg18_vector_opts.name
 
-  publicly_accessible     = var.rds_publicly_accessible
+  publicly_accessible     = false          # ← CHANGED: no public IP
   multi_az                = false
   backup_retention_period = 0
   skip_final_snapshot     = true

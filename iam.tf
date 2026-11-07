@@ -47,3 +47,27 @@ resource "aws_iam_user_policy_attachment" "bedrock_dev_runtime" {
   user       = data.aws_iam_user.bedrock_dev.user_name
   policy_arn = aws_iam_policy.runtime_access.arn
 }
+
+resource "aws_iam_role_policy" "ecs_task_cognito" {
+  name = "${var.project}-ecs-task-cognito"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:SignUp",
+          "cognito-idp:InitiateAuth",
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminSetUserPassword",
+          "cognito-idp:AdminGetUser",
+          "cognito-idp:AdminConfirmSignUp",
+          "cognito-idp:GetUser",
+        ]
+        Resource = aws_cognito_user_pool.main.arn
+      },
+    ]
+  })
+}

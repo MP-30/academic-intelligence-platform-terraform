@@ -51,3 +51,28 @@ variable "bedrock_dev_user" {
   type        = string
   default     = "bedrock-dev"
 }
+
+variable "ecs_worker_enabled" {
+  description = "Create the ECS Fargate worker service. Set false until image is pushed + migrations run."
+  type        = bool
+  default     = false
+}
+variable "domain_name" {
+  type    = string
+  default = "adityalive.tech"
+}
+
+variable "ui_subdomain" {
+  type    = string
+  default = "ai"
+}
+
+variable "api_subdomain" {
+  type    = string
+  default = "api"    # ← NOT "api.ai" — Namify doesn't support nested CNAMEs
+}
+
+variable "cors_allowed_origin" {
+  type    = string
+  default = "https://ai.adityalive.tech"
+}
