@@ -1,0 +1,8 @@
+aws_region  = ""
+aws_profile = ""
+project     = ""
+
+db_username = ""
+db_password = ""
+
+bedrock_dev_user = ""

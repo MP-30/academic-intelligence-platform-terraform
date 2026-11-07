@@ -1,0 +1,15 @@
+.idea
+# Terraform state (stored in S3, but block local copies)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Secrets
+terraform.tfvars
+*.tfvars
+!terraform.tfvars.example
+
+# Logs
+crash.log
+*.log
