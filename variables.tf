@@ -76,3 +76,8 @@ variable "cors_allowed_origin" {
   type    = string
   default = "https://ai.adityalive.tech"
 }
+variable "tavily_api_key" {
+  description = "Tavily API key for web search"
+  type        = string
+  sensitive   = true
+}

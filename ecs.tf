@@ -180,6 +180,7 @@ resource "aws_ecs_task_definition" "api" {
       { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.api.id },
       { name = "COGNITO_REGION", value = var.aws_region },
       { name = "CORS_ALLOWED_ORIGIN", value = var.cors_allowed_origin },
+      { name = "TAVILY_API_KEY", value = var.tavily_api_key },
     ]
 
     logConfiguration = {
