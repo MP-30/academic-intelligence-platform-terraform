@@ -1,5 +1,5 @@
 resource "aws_ecs_cluster" "main" {
-  name = "${var.project}"
+  name = var.project
 }
 
 resource "aws_cloudwatch_log_group" "ecs_worker" {
@@ -45,8 +45,8 @@ resource "aws_iam_role_policy" "ecs_task" {
         Resource = "*"
       },
       {
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"]
         Resource = [aws_s3_bucket.docs.arn, "${aws_s3_bucket.docs.arn}/*"]
       },
       {
@@ -111,17 +111,18 @@ resource "aws_ecs_task_definition" "worker" {
 }
 
 resource "aws_ecs_service" "worker" {
-  count           = var.ecs_worker_enabled ? 1 : 0
-  name            = "${var.project}-worker"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.worker.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  count                             = var.ecs_worker_enabled ? 1 : 0
+  name                              = "${var.project}-worker"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.worker.arn
+  desired_count                     = 1
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 300
 
   enable_execute_command = true
 
   network_configuration {
-    subnets = [aws_subnet.public[0].id]
+    subnets          = [aws_subnet.public[0].id]
     security_groups  = [aws_security_group.ecs_worker.id]
     assign_public_ip = true
   }
@@ -140,58 +141,125 @@ resource "aws_ecs_task_definition" "api" {
   family                   = "${var.project}-api"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
+  cpu                      = "512"
+  memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
-  container_definitions = jsonencode([{
-    name      = "api"
-    image     = "${aws_ecr_repository.worker.repository_url}:latest"
-    essential = true
-    command   = ["api"]
+  container_definitions = jsonencode([
+    {
+      name      = "api"
+      image     = "${aws_ecr_repository.worker.repository_url}:latest"
+      essential = true
+      command   = ["api"]
 
-    portMappings = [{ containerPort = 8000, hostPort = 8000, protocol = "tcp" }]
+      portMappings = [{ containerPort = 8000, hostPort = 8000, protocol = "tcp" }]
 
-    environment = [
-      { name = "DATABASE_URL", value = "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}?sslmode=require" },
-      { name = "AWS_REGION", value = var.aws_region },
-      { name = "AWS_DEFAULT_REGION", value = var.aws_region },
-      { name = "S3_ENDPOINT_URL", value = "" },
-      { name = "SQS_ENDPOINT_URL", value = "" },
-      { name = "S3_BUCKET", value = aws_s3_bucket.docs.id },
-      { name = "SQS_QUEUE_NAME", value = aws_sqs_queue.main.name },
-      { name = "SQS_QUEUE_URL", value = aws_sqs_queue.main.url },
-      { name = "SQS_DLQ_URL", value = aws_sqs_queue.dlq.url },
-      { name = "EMBEDDING_PROVIDER", value = "bedrock" },
-      { name = "EMBEDDING_MODEL_ID", value = "amazon.titan-embed-text-v2:0" },
-      { name = "EMBEDDING_DIMENSIONS", value = "1024" },
-      { name = "LLM_MODEL_ID", value = "mistral.mistral-large-3-675b-instruct" },
-      { name = "LLM_MAX_TOKENS", value = "1024" },
-      { name = "LLM_TEMPERATURE", value = "0.1" },
-      { name = "ASK_TOP_K", value = "5" },
-      { name = "CHUNK_SIZE_TOKENS", value = "600" },
-      { name = "CHUNK_OVERLAP_TOKENS", value = "100" },
-      { name = "POSTGRES_USER", value = var.db_username },
-      { name = "POSTGRES_PASSWORD", value = var.db_password },
-      { name = "POSTGRES_DB", value = var.db_name },
-      { name = "POSTGRES_PORT", value = tostring(aws_db_instance.main.port) },
-      { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.main.id },
-      { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.api.id },
-      { name = "COGNITO_REGION", value = var.aws_region },
-      { name = "CORS_ALLOWED_ORIGIN", value = var.cors_allowed_origin },
-      { name = "TAVILY_API_KEY", value = var.tavily_api_key },
-    ]
+      environment = [
+        { name = "DATABASE_URL", value = "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}?sslmode=require" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "AWS_DEFAULT_REGION", value = var.aws_region },
+        { name = "S3_ENDPOINT_URL", value = "" },
+        { name = "SQS_ENDPOINT_URL", value = "" },
+        { name = "S3_BUCKET", value = aws_s3_bucket.docs.id },
+        { name = "SQS_QUEUE_NAME", value = aws_sqs_queue.main.name },
+        { name = "SQS_QUEUE_URL", value = aws_sqs_queue.main.url },
+        { name = "SQS_DLQ_URL", value = aws_sqs_queue.dlq.url },
+        { name = "EMBEDDING_PROVIDER", value = "bedrock" },
+        { name = "EMBEDDING_MODEL_ID", value = "amazon.titan-embed-text-v2:0" },
+        { name = "EMBEDDING_DIMENSIONS", value = "1024" },
+        { name = "LLM_MODEL_ID", value = "mistral.mistral-large-3-675b-instruct" },
+        { name = "LLM_MAX_TOKENS", value = "1024" },
+        { name = "LLM_TEMPERATURE", value = "0.1" },
+        { name = "ASK_TOP_K", value = "5" },
+        { name = "CHUNK_SIZE_TOKENS", value = "600" },
+        { name = "CHUNK_OVERLAP_TOKENS", value = "100" },
+        { name = "POSTGRES_USER", value = var.db_username },
+        { name = "POSTGRES_PASSWORD", value = var.db_password },
+        { name = "POSTGRES_DB", value = var.db_name },
+        { name = "POSTGRES_PORT", value = tostring(aws_db_instance.main.port) },
+        { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.main.id },
+        { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.api.id },
+        { name = "COGNITO_REGION", value = var.aws_region },
+        { name = "CORS_ALLOWED_ORIGIN", value = var.cors_allowed_origin },
+        { name = "TAVILY_API_KEY", value = var.tavily_api_key },
+        { name = "DOC_MCP_URL", value = "http://localhost:8001/mcp" },
+        { name = "WEB_MCP_URL", value = "http://localhost:8002/mcp" },
+        { name = "USE_MCP_TOOLS", value = "true" },
+      ]
 
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.ecs_api.name
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "api"
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.ecs_api.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "api"
+        }
+      }
+    },
+    {
+      name      = "doc-mcp"
+      image     = "${aws_ecr_repository.worker.repository_url}:latest"
+      essential = false
+      command   = ["mcp-doc"]
+
+      environment = [
+        { name = "DATABASE_URL", value = "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${var.db_name}?sslmode=require" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "AWS_DEFAULT_REGION", value = var.aws_region },
+        { name = "S3_ENDPOINT_URL", value = "" },
+        { name = "SQS_ENDPOINT_URL", value = "" },
+        { name = "S3_BUCKET", value = aws_s3_bucket.docs.id },
+        { name = "EMBEDDING_PROVIDER", value = "bedrock" },
+        { name = "EMBEDDING_MODEL_ID", value = "amazon.titan-embed-text-v2:0" },
+        { name = "EMBEDDING_DIMENSIONS", value = "1024" },
+        { name = "POSTGRES_USER", value = var.db_username },
+        { name = "POSTGRES_PASSWORD", value = var.db_password },
+        { name = "POSTGRES_DB", value = var.db_name },
+        { name = "POSTGRES_PORT", value = tostring(aws_db_instance.main.port) },
+        { name = "DOC_MCP_PORT", value = "8001" },
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.ecs_api.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "doc-mcp"
+        }
+      }
+    },
+    {
+      name      = "web-mcp"
+      image     = "${aws_ecr_repository.worker.repository_url}:latest"
+      essential = false
+      command   = ["mcp-web"]
+
+      environment = [
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "AWS_DEFAULT_REGION", value = var.aws_region },
+        { name = "TAVILY_API_KEY", value = var.tavily_api_key },
+        { name = "WEB_MCP_PORT", value = "8002" },
+        { name = "DATABASE_URL", value = "postgresql+psycopg://unused:unused@localhost:5432/unused" },
+        { name = "POSTGRES_USER", value = "unused" },
+        { name = "POSTGRES_PASSWORD", value = "unused" },
+        { name = "POSTGRES_DB", value = "unused" },
+        { name = "POSTGRES_PORT", value = "5432" },
+        { name = "S3_ENDPOINT_URL", value = "" },
+        { name = "SQS_ENDPOINT_URL", value = "" },
+        { name = "S3_BUCKET", value = aws_s3_bucket.docs.id },
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.ecs_api.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "web-mcp"
+        }
       }
     }
-  }])
+  ])
 }
 
 resource "aws_ecs_service" "api" {
