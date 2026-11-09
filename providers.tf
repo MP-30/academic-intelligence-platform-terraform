@@ -18,8 +18,10 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = var.aws_profile
+  region = var.aws_region
+  # In CI, aws_profile is empty → use default credential chain (OIDC env vars).
+  # Locally, aws_profile="terraform-ai" → use that profile from ~/.aws/credentials.
+  profile = var.aws_profile != "" ? var.aws_profile : null
 
   default_tags {
     tags = {
