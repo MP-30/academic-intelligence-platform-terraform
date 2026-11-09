@@ -366,3 +366,4 @@ resource "aws_ecs_service" "ui" {
 
   depends_on = [aws_lb_listener.https]
 }
+# TODO: review ECS task definition for cost optimization
