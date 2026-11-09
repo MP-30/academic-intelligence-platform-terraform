@@ -53,7 +53,10 @@ jobs:
 
       - name: Terraform plan
         id: plan
-        run: terraform plan -no-color -out=tfplan
+        env:
+          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+          TF_VAR_tavily_api_key: ${{ secrets.TF_VAR_tavily_api_key }}
+        run: terraform plan -input=false -no-color -out=tfplan
         continue-on-error: true
 
       - name: Post plan on PR
