@@ -101,7 +101,7 @@ output "acm_validation_records" {
 output "subdomain_records" {
   description = "Add these CNAMEs at Namify after apply completes"
   value = {
-    ui  = { host = var.ui_subdomain,  target = aws_lb.main.dns_name }
+    ui  = { host = var.ui_subdomain, target = aws_lb.main.dns_name }
     api = { host = var.api_subdomain, target = aws_lb.main.dns_name }
   }
 }

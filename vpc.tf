@@ -6,7 +6,7 @@ resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "${var.project}-vpc" }
+  tags                 = { Name = "${var.project}-vpc" }
 }
 
 # Public subnets — ECS worker (and future ALB)
@@ -17,7 +17,7 @@ resource "aws_subnet" "public" {
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = {
-    Name = "${var.project}-public-${count.index}"
+    Name                                       = "${var.project}-public-${count.index}"
     "kubernetes.io/role/elb"                   = "1"
     "kubernetes.io/cluster/${var.project}-eks" = "shared"
   }
@@ -30,7 +30,7 @@ resource "aws_subnet" "private" {
   cidr_block        = "10.0.${count.index + 11}.0/24"
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
-    Name = "${var.project}-private-${count.index}"
+    Name                                       = "${var.project}-private-${count.index}"
     "kubernetes.io/role/internal-elb"          = "1"
     "kubernetes.io/cluster/${var.project}-eks" = "shared"
   }

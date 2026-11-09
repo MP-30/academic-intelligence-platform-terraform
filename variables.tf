@@ -69,7 +69,7 @@ variable "ui_subdomain" {
 
 variable "api_subdomain" {
   type    = string
-  default = "api"    # ← NOT "api.ai" — Namify doesn't support nested CNAMEs
+  default = "api" # ← NOT "api.ai" — Namify doesn't support nested CNAMEs
 }
 
 variable "cors_allowed_origin" {
