@@ -1,11 +1,16 @@
 # Academic Intelligence Platform — Infrastructure
 
-[![Terraform Plan](https://github.com/MP-30/academic-intelligence-platform-terraform/actions/workflows/terraform-plan.yml/badge.svg)](https://github.com/MP-30/academic-intelligence-platform-terraform/actions/workflows/terraform-plan.yml)
 [![Terraform 1.10+](https://img.shields.io/badge/terraform-1.10%2B-623CE4.svg)](https://developer.hashicorp.com/terraform)
 
 Terraform configuration for the AWS deployment of the [Academic Intelligence Platform](https://github.com/MP-30/Academic-Intelligence-Platform), a PDF question-answering application using Bedrock, pgvector, and MCP tools.
 
-[Live UI](https://ai.adityalive.tech) · [Application source and local setup](https://github.com/MP-30/Academic-Intelligence-Platform)
+[Application source and local setup](https://github.com/MP-30/Academic-Intelligence-Platform)
+
+## Deployment status
+
+The original `us-east-1` deployment was retired on November 20, 2026. Terraform reported 58 resources destroyed, including the ECS services, load balancer, PostgreSQL instance, document bucket, and Cognito user pool. The database was deleted without a final snapshot. The dedicated remote state bucket, its version history, and the two project-specific GitHub OIDC roles were also deleted.
+
+The hosted UI and API are offline. The old application CNAME records are managed at the external DNS provider. Use the steps below to create a fresh deployment with a new state bucket and current DNS records.
 
 ## Architecture
 
@@ -34,7 +39,7 @@ flowchart LR
 
 The API and both MCP sidecars share an ECS task and communicate over localhost. Tasks use public subnets and public IPs for outbound access. Security groups allow API and UI ingress from the ALB. RDS uses private subnets and accepts application traffic from the API and worker security groups.
 
-## Provisioned components
+## Components provisioned by this configuration
 
 | Component | Configuration |
 |---|---|
@@ -70,7 +75,7 @@ git clone https://github.com/MP-30/academic-intelligence-platform-terraform.git
 cd academic-intelligence-platform-terraform
 ```
 
-For an existing deployment, retain its state bucket, state key, workspace, and variable values. The following bootstrap steps create a new installation. Confirm the intended AWS account with `aws sts get-caller-identity` before provisioning.
+The following bootstrap steps create a new installation. The checked-in `backend.tf` still references the retired state bucket. Replace that bucket before initializing Terraform for a fresh deployment. For a separate existing deployment, continue using its own state bucket, key, workspace, and variables. Confirm the intended AWS account with `aws sts get-caller-identity` before provisioning.
 
 Create the remote state bucket once. Choose a globally unique name and retain it for subsequent runs.
 
@@ -87,7 +92,7 @@ aws s3api put-public-access-block --bucket "$STATE_BUCKET" \
   'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
 ```
 
-Edit `backend.tf` to use that bucket and its region. Set the profile in your shell so backend initialization can authenticate. The provider's `aws_profile` variable configures provider access separately.
+Edit `backend.tf` to use that bucket and its region. Set the profile in your shell so backend initialization can authenticate. The provider's `aws_profile` variable configures provider access separately. When reusing a checkout initialized against the retired bucket, initialize the new backend with `terraform init -reconfigure` instead of the `terraform init` below.
 
 Create `terraform.tfvars` using this example for a new installation. Preserve existing secret values when updating an established deployment. The checked-in example omits some required settings.
 
@@ -204,7 +209,7 @@ The liveness endpoint returns a static response. A successful health check alone
 
 The [Terraform Plan workflow](./.github/workflows/terraform-plan.yml) runs formatting, validation, and a plan on matching changes to `main` and pull requests. It posts the plan on pull requests. Applying infrastructure remains a manual operation.
 
-Configure these repository secrets before using the workflow.
+The original workflow roles were deleted. For a new deployment, create roles that trust the intended GitHub repositories and update the following secrets before running the plan workflow.
 
 | Secret | Purpose |
 |---|---|
@@ -239,4 +244,4 @@ The ECS image tag is mutable. MCP sidecars are nonessential containers, and the 
 
 ## Cost
 
-Costs depend on task runtime, ALB usage, database billing, storage/log retention, and Bedrock tokens including evals. Public subnet tasks and an S3 Gateway endpoint support the current deployment without a NAT gateway. Use dated AWS Cost Explorer figures for your account; the application README's historical estimate includes Bedrock and eval usage.
+For a fresh deployment, costs depend on task runtime, the load balancer, database billing, storage and log retention, and Bedrock usage. This configuration uses public subnets for ECS tasks and an S3 Gateway endpoint. The application README records the original estimate and its assumptions.
